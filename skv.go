@@ -20,13 +20,13 @@ import (
 	"errors"
 	"time"
 
-	"github.com/boltdb/bolt"
+	"go.etcd.io/bbolt"
 )
 
 // KVStore represents the key value store. Use the Open() method to create
 // one, and Close() it when done.
 type KVStore struct {
-	db *bolt.DB
+	db *bbolt.DB
 }
 
 var (
@@ -49,13 +49,13 @@ var (
 // time. Attempts to open the file from another process will fail with a
 // timeout error.
 func Open(path string) (*KVStore, error) {
-	opts := &bolt.Options{
+	opts := &bbolt.Options{
 		Timeout: 50 * time.Millisecond,
 	}
-	if db, err := bolt.Open(path, 0640, opts); err != nil {
+	if db, err := bbolt.Open(path, 0640, opts); err != nil {
 		return nil, err
 	} else {
-		err := db.Update(func(tx *bolt.Tx) error {
+		err := db.Update(func(tx *bbolt.Tx) error {
 			_, err := tx.CreateBucketIfNotExists(bucketName)
 			return err
 		})
@@ -86,7 +86,7 @@ func (kvs *KVStore) Put(key string, value interface{}) error {
 	if err := gob.NewEncoder(&buf).Encode(value); err != nil {
 		return err
 	}
-	return kvs.db.Update(func(tx *bolt.Tx) error {
+	return kvs.db.Update(func(tx *bbolt.Tx) error {
 		return tx.Bucket(bucketName).Put([]byte(key), buf.Bytes())
 	})
 }
@@ -113,7 +113,7 @@ func (kvs *KVStore) Put(key string, value interface{}) error {
 //      fmt.Println("entry is present")
 //  }
 func (kvs *KVStore) Get(key string, value interface{}) error {
-	return kvs.db.View(func(tx *bolt.Tx) error {
+	return kvs.db.View(func(tx *bbolt.Tx) error {
 		c := tx.Bucket(bucketName).Cursor()
 		if k, v := c.Seek([]byte(key)); k == nil || string(k) != key {
 			return ErrNotFound
@@ -131,7 +131,7 @@ func (kvs *KVStore) Get(key string, value interface{}) error {
 //
 //	store.Delete("key42")
 func (kvs *KVStore) Delete(key string) error {
-	return kvs.db.Update(func(tx *bolt.Tx) error {
+	return kvs.db.Update(func(tx *bbolt.Tx) error {
 		c := tx.Bucket(bucketName).Cursor()
 		if k, _ := c.Seek([]byte(key)); k == nil || string(k) != key {
 			return ErrNotFound
@@ -139,6 +139,27 @@ func (kvs *KVStore) Delete(key string) error {
 			return c.Delete()
 		}
 	})
+}
+
+// Iterate over all existing keys and return a slice of the keys.
+// If no keys are found, return an empty slice.
+//
+//	store.GetKeys()
+func (kvs *KVStore) GetKeys() ([]string, error) {
+	var kl []string
+
+	err := kvs.db.View(func(tx *bbolt.Tx) error {
+		var err error
+		b := tx.Bucket(bucketName)
+
+		err = b.ForEach(func(k, v []byte) error {
+			//copy(kopie, k)
+			kl = append(kl, string(k))
+			return err
+		})
+		return err
+	})
+	return kl, err
 }
 
 // Close closes the key-value store file.

@@ -17,6 +17,7 @@ func TestBasic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	// put a key
 	if err := db.Put("key1", "value1"); err != nil {
 		t.Fatal(err)
@@ -62,6 +63,7 @@ func TestMoreNotFoundCases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	var val string
 	if err := db.Get("key1", &val); err != ErrNotFound {
 		t.Fatal(err)
@@ -109,6 +111,7 @@ func testGetPut(t *testing.T, inval interface{}, outval interface{}) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	input, err := json.Marshal(inval)
 	if err != nil {
 		t.Fatal(err)
@@ -137,6 +140,7 @@ func TestNil(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	if err := db.Put("key1", nil); err != ErrBadValue {
 		t.Fatalf("got %v, expected ErrBadValue", err)
 	}
@@ -150,12 +154,34 @@ func TestNil(t *testing.T) {
 	db.Close()
 }
 
+func TestGetKeys(t *testing.T) {
+	os.Remove("skv-test.db")
+	db, err := Open("skv-test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("skv-test.db")
+	if l, err := db.GetKeys(); err != nil || len(l) != 0 {
+		t.Fatal("GetKey slice should be empty")
+	}
+	if err := db.Put("test.key", "TESTVALUE"); err != nil {
+		t.Fatal(err)
+	}
+	if l, err := db.GetKeys(); err != nil || len(l) != 1 {
+		t.Fatal("GetKey slice should contain one key")
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGoroutines(t *testing.T) {
 	os.Remove("skv-test.db")
 	db, err := Open("skv-test.db")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	rand.Seed(time.Now().UnixNano())
 	var wg sync.WaitGroup
 	for i := 0; i < 1000; i++ {
@@ -180,6 +206,7 @@ func TestGoroutines(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+	db.Close()
 }
 
 func BenchmarkPut(b *testing.B) {
@@ -188,6 +215,7 @@ func BenchmarkPut(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if err := db.Put(fmt.Sprintf("key%d", i), "this.is.a.value"); err != nil {
@@ -204,6 +232,7 @@ func BenchmarkPutGet(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if err := db.Put(fmt.Sprintf("key%d", i), "this.is.a.value"); err != nil {
@@ -226,6 +255,7 @@ func BenchmarkPutDelete(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer os.Remove("skv-test.db")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if err := db.Put(fmt.Sprintf("key%d", i), "this.is.a.value"); err != nil {

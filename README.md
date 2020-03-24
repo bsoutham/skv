@@ -1,3 +1,10 @@
+This is a fork of [SKV](https://godoc.org/github.com/rapidloop/skv)
+
+This has been modified to move from [BoltDB] (https://github.com/boltdb/bolt) which has been deprecated to [BBoltDB] (https://github.com/etcd-io/bbolt)
+It has a new method "GetKeys" added that returns a list of keys stored in the DB.
+
+It also has been modified to use go modules.
+
 
 # skv
 
@@ -9,5 +16,5 @@ for a description of skv internals.
 
 Package documentation is available [here](https://godoc.org/github.com/rapidloop/skv).
 
-Follow us on Twitter for updates! [@therapidloop](https://twitter.com/therapidloop)
+
 
